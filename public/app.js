@@ -94,14 +94,23 @@ function handleDynamicButtons(e) {
         case 'delete-domain':
             deleteDomain(button.dataset.domainId, button.dataset.domainName);
             break;
+        case 'view-credentials':
+            viewEmailCredentials(button.dataset.requestId);
+            break;
         case 'approve-email':
-            updateEmailRequestStatus(button.dataset.requestId, 'created');
+            showApproveEmailModal(button.dataset.requestId);
             break;
         case 'reject-email':
             updateEmailRequestStatus(button.dataset.requestId, 'rejected');
             break;
         case 'delete-email':
             deleteEmailRequest(button.dataset.requestId);
+            break;
+        case 'view-smtp-imap':
+            viewSmtpImapDetails(button.dataset.requestId);
+            break;
+        case 'toggle-password':
+            togglePassword();
             break;
         case 'edit-user':
             editUser(button.dataset.userId);
@@ -488,13 +497,25 @@ function renderEmailRequestsTable(requests) {
                         <td><span class="status-badge status-${request.status}">${request.status}</span></td>
                         <td>${formatDate(request.createdAt)}</td>
                         <td>
+                            ${request.status === 'pending' ? `
+                                <button class="btn btn-outline btn-sm" data-action="view-credentials" data-request-id="${request._id}">
+                                    <i class="fas fa-eye"></i> View Credentials
+                                </button>
+                            ` : ''}
                             ${currentUser.isAdmin ? `
-                                <button class="btn btn-outline btn-sm" data-action="approve-email" data-request-id="${request._id}">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
-                                <button class="btn btn-error btn-sm" data-action="reject-email" data-request-id="${request._id}">
-                                    <i class="fas fa-times"></i> Reject
-                                </button>
+                                ${request.status === 'pending' ? `
+                                    <button class="btn btn-success btn-sm" data-action="approve-email" data-request-id="${request._id}">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn btn-error btn-sm" data-action="reject-email" data-request-id="${request._id}">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                ` : ''}
+                                ${request.status === 'created' ? `
+                                    <button class="btn btn-outline btn-sm" data-action="view-smtp-imap" data-request-id="${request._id}">
+                                        <i class="fas fa-server"></i> SMTP/IMAP
+                                    </button>
+                                ` : ''}
                             ` : ''}
                             ${request.status === 'pending' ? `
                                 <button class="btn btn-error btn-sm" data-action="delete-email" data-request-id="${request._id}">
@@ -1297,5 +1318,382 @@ async function loadAccountBalance() {
         const balanceElement = document.getElementById('account-balance');
         balanceElement.textContent = 'Error loading';
         balanceElement.title = 'Error loading account balance';
+    }
+}
+
+// View email credentials
+async function viewEmailCredentials(requestId) {
+    try {
+        const response = await fetch(`/api/emails/${requestId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const request = data.emailRequest;
+            const content = `
+                <div class="modal-header">
+                    <h2><i class="fas fa-eye"></i> Email Credentials</h2>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="credentials-info">
+                        <div class="credential-item">
+                            <label><strong>Email Address:</strong></label>
+                            <div class="credential-value">${request.fullEmailAddress}</div>
+                        </div>
+                        <div class="credential-item">
+                            <label><strong>Username:</strong></label>
+                            <div class="credential-value">${request.requestedUsername}</div>
+                        </div>
+                        <div class="credential-item">
+                            <label><strong>Password:</strong></label>
+                            <div class="credential-value password-field">
+                                <span id="password-display">••••••••</span>
+                                <button type="button" class="btn btn-outline btn-sm" data-action="toggle-password">
+                                    <i class="fas fa-eye" id="password-toggle-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="actual-password" value="${request.password}">
+                        </div>
+                        <div class="credential-item">
+                            <label><strong>Domain:</strong></label>
+                            <div class="credential-value">${request.domainName}</div>
+                        </div>
+                        <div class="credential-item">
+                            <label><strong>Requested Date:</strong></label>
+                            <div class="credential-value">${formatDate(request.createdAt)}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" data-action="close-modal">Close</button>
+                </div>
+            `;
+            
+            showModal('Email Credentials', content);
+        } else {
+            showToast('Failed to load credentials', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to load credentials:', error);
+        showToast('Failed to load credentials', 'error');
+    }
+}
+
+// Toggle password visibility
+function togglePassword() {
+    const passwordDisplay = document.getElementById('password-display');
+    const actualPassword = document.getElementById('actual-password').value;
+    const toggleIcon = document.getElementById('password-toggle-icon');
+    
+    if (passwordDisplay.textContent === '••••••••') {
+        passwordDisplay.textContent = actualPassword;
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordDisplay.textContent = '••••••••';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
+// Show approve email modal with SMTP/IMAP form
+async function showApproveEmailModal(requestId) {
+    try {
+        const response = await fetch(`/api/emails/${requestId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const request = data.emailRequest;
+            const content = `
+                <div class="modal-header">
+                    <h2><i class="fas fa-check"></i> Approve Email Request</h2>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+                <form id="approve-email-form" class="modal-form">
+                    <div class="email-info">
+                        <h3>Email: ${request.fullEmailAddress}</h3>
+                        <p>Requested by: ${request.requestedBy.username}</p>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-paper-plane"></i> SMTP Settings (Outgoing Mail)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="smtp-server">SMTP Server</label>
+                                <input type="text" id="smtp-server" name="smtpServer" placeholder="mail.${request.domainName}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp-port">Port</label>
+                                <select id="smtp-port" name="smtpPort" required>
+                                    <option value="587">587 (STARTTLS)</option>
+                                    <option value="465">465 (SSL/TLS)</option>
+                                    <option value="25">25 (None)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="smtp-security">Security</label>
+                                <select id="smtp-security" name="smtpSecurity" required>
+                                    <option value="STARTTLS">STARTTLS</option>
+                                    <option value="SSL/TLS">SSL/TLS</option>
+                                    <option value="None">None</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="smtp-username">SMTP Username</label>
+                                <input type="text" id="smtp-username" name="smtpUsername" value="${request.fullEmailAddress}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp-password">SMTP Password</label>
+                                <input type="password" id="smtp-password" name="smtpPassword" value="${request.password}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-inbox"></i> IMAP Settings (Incoming Mail)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="imap-server">IMAP Server</label>
+                                <input type="text" id="imap-server" name="imapServer" placeholder="mail.${request.domainName}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="imap-port">Port</label>
+                                <select id="imap-port" name="imapPort" required>
+                                    <option value="993">993 (SSL/TLS)</option>
+                                    <option value="143">143 (STARTTLS)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="imap-security">Security</label>
+                                <select id="imap-security" name="imapSecurity" required>
+                                    <option value="SSL/TLS">SSL/TLS</option>
+                                    <option value="STARTTLS">STARTTLS</option>
+                                    <option value="None">None</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="imap-username">IMAP Username</label>
+                                <input type="text" id="imap-username" name="imapUsername" value="${request.fullEmailAddress}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="imap-password">IMAP Password</label>
+                                <input type="password" id="imap-password" name="imapPassword" value="${request.password}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="requestId" value="${requestId}">
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Approve & Save Settings
+                        </button>
+                    </div>
+                </form>
+            `;
+            
+            showModal('Approve Email Request', content);
+            
+            // Add form handler
+            document.getElementById('approve-email-form').addEventListener('submit', handleApproveEmail);
+            
+            // Update port when security changes
+            document.getElementById('smtp-security').addEventListener('change', updateSmtpPort);
+            document.getElementById('imap-security').addEventListener('change', updateImapPort);
+            
+        } else {
+            showToast('Failed to load email request', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to load email request:', error);
+        showToast('Failed to load email request', 'error');
+    }
+}
+
+// Update SMTP port based on security selection
+function updateSmtpPort() {
+    const security = document.getElementById('smtp-security').value;
+    const port = document.getElementById('smtp-port');
+    
+    switch(security) {
+        case 'STARTTLS':
+            port.value = '587';
+            break;
+        case 'SSL/TLS':
+            port.value = '465';
+            break;
+        case 'None':
+            port.value = '25';
+            break;
+    }
+}
+
+// Update IMAP port based on security selection
+function updateImapPort() {
+    const security = document.getElementById('imap-security').value;
+    const port = document.getElementById('imap-port');
+    
+    switch(security) {
+        case 'SSL/TLS':
+            port.value = '993';
+            break;
+        case 'STARTTLS':
+            port.value = '143';
+            break;
+        case 'None':
+            port.value = '143';
+            break;
+    }
+}
+
+// Handle approve email form submission
+async function handleApproveEmail(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const requestId = formData.get('requestId');
+    
+    const approvalData = {
+        status: 'created',
+        smtpSettings: {
+            server: formData.get('smtpServer'),
+            port: parseInt(formData.get('smtpPort')),
+            security: formData.get('smtpSecurity'),
+            username: formData.get('smtpUsername'),
+            password: formData.get('smtpPassword')
+        },
+        imapSettings: {
+            server: formData.get('imapServer'),
+            port: parseInt(formData.get('imapPort')),
+            security: formData.get('imapSecurity'),
+            username: formData.get('imapUsername'),
+            password: formData.get('imapPassword')
+        }
+    };
+    
+    try {
+        showLoading();
+        
+        const response = await fetch(`/api/emails/${requestId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(approvalData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Email request approved with SMTP/IMAP settings!', 'success');
+            closeModal();
+            loadEmailRequests();
+            loadDashboardData();
+        } else {
+            showToast(result.message || 'Failed to approve email request', 'error');
+        }
+    } catch (error) {
+        console.error('Approve email error:', error);
+        showToast('Failed to approve email request', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// View SMTP/IMAP details for approved requests
+async function viewSmtpImapDetails(requestId) {
+    try {
+        const response = await fetch(`/api/emails/${requestId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const request = data.emailRequest;
+            const smtp = request.smtpSettings || {};
+            const imap = request.imapSettings || {};
+            
+            const content = `
+                <div class="modal-header">
+                    <h2><i class="fas fa-server"></i> SMTP/IMAP Settings</h2>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="email-settings">
+                        <div class="settings-header">
+                            <h3>${request.fullEmailAddress}</h3>
+                            <span class="status-badge status-${request.status}">${request.status}</span>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4><i class="fas fa-paper-plane"></i> SMTP Settings (Outgoing Mail)</h4>
+                            <div class="settings-grid">
+                                <div class="setting-item">
+                                    <label>Server:</label>
+                                    <span>${smtp.server || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Port:</label>
+                                    <span>${smtp.port || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Security:</label>
+                                    <span>${smtp.security || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Username:</label>
+                                    <span>${smtp.username || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Password:</label>
+                                    <span class="password-hidden">••••••••</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4><i class="fas fa-inbox"></i> IMAP Settings (Incoming Mail)</h4>
+                            <div class="settings-grid">
+                                <div class="setting-item">
+                                    <label>Server:</label>
+                                    <span>${imap.server || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Port:</label>
+                                    <span>${imap.port || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Security:</label>
+                                    <span>${imap.security || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Username:</label>
+                                    <span>${imap.username || 'Not configured'}</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Password:</label>
+                                    <span class="password-hidden">••••••••</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" data-action="close-modal">Close</button>
+                </div>
+            `;
+            
+            showModal('SMTP/IMAP Settings', content);
+        } else {
+            showToast('Failed to load SMTP/IMAP settings', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to load SMTP/IMAP settings:', error);
+        showToast('Failed to load SMTP/IMAP settings', 'error');
     }
 }

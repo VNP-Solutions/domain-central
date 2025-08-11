@@ -176,7 +176,7 @@ router.put('/:id/status', requireAdmin, [
             });
         }
 
-        const { status, notes } = req.body;
+        const { status, notes, smtpSettings, imapSettings } = req.body;
 
         const emailRequest = await EmailRequest.findById(req.params.id);
         if (!emailRequest) {
@@ -190,6 +190,15 @@ router.put('/:id/status', requireAdmin, [
         
         if (notes) {
             emailRequest.notes = notes;
+        }
+
+        // Update SMTP/IMAP settings if provided (usually when approving)
+        if (smtpSettings) {
+            emailRequest.smtpSettings = smtpSettings;
+        }
+        
+        if (imapSettings) {
+            emailRequest.imapSettings = imapSettings;
         }
 
         await emailRequest.save();

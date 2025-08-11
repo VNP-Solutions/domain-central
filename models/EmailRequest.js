@@ -47,6 +47,20 @@ const emailRequestSchema = new mongoose.Schema({
     processedAt: {
         type: Date
     },
+    smtpSettings: {
+        server: { type: String },
+        port: { type: Number },
+        security: { type: String, enum: ['SSL/TLS', 'STARTTLS', 'None'] },
+        username: { type: String },
+        password: { type: String }
+    },
+    imapSettings: {
+        server: { type: String },
+        port: { type: Number },
+        security: { type: String, enum: ['SSL/TLS', 'STARTTLS', 'None'] },
+        username: { type: String },
+        password: { type: String }
+    },
     createdAt: {
         type: Date,
         default: Date.now
