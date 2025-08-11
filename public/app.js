@@ -129,6 +129,7 @@ async function checkAuthStatus() {
             currentUser = data.user;
             showDashboard();
             loadDashboardData();
+            loadAccountBalance();
         } else {
             showLoginPage();
         }
@@ -160,6 +161,7 @@ async function handleLogin(e) {
             showToast('Login successful!', 'success');
             showDashboard();
             loadDashboardData();
+            loadAccountBalance();
         } else {
             showToast(result.message || 'Login failed', 'error');
         }
@@ -1265,5 +1267,35 @@ async function viewDomainDetails(domainId) {
     } catch (error) {
         console.error('Failed to load domain details:', error);
         showToast('Failed to load domain details', 'error');
+    }
+}
+
+// Load account balance
+async function loadAccountBalance() {
+    try {
+        const response = await fetch('/api/domains/balance');
+        const data = await response.json();
+        
+        const balanceElement = document.getElementById('account-balance');
+        
+        if (data.success) {
+            const formattedBalance = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: data.currency || 'USD',
+                minimumFractionDigits: 2
+            }).format(data.balance);
+            
+            balanceElement.textContent = formattedBalance;
+            balanceElement.title = `Available Balance: ${formattedBalance}`;
+        } else {
+            balanceElement.textContent = 'Balance unavailable';
+            balanceElement.title = 'Could not load account balance';
+            console.warn('Failed to load balance:', data.message);
+        }
+    } catch (error) {
+        console.error('Balance loading error:', error);
+        const balanceElement = document.getElementById('account-balance');
+        balanceElement.textContent = 'Error loading';
+        balanceElement.title = 'Error loading account balance';
     }
 }

@@ -29,6 +29,33 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get account balance (must be before /:id route)
+router.get('/balance', async (req, res) => {
+    try {
+        const result = await namecheapAPI.getBalances();
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                balance: result.availableBalance,
+                currency: result.currency
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: result.message || 'Failed to get balance'
+            });
+        }
+    } catch (error) {
+        console.error('Balance check error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to check account balance',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+});
+
 // Get domain by ID
 router.get('/:id', async (req, res) => {
     try {

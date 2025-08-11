@@ -263,6 +263,36 @@ class NamecheapAPI {
             throw new Error(`Failed to get domain info: ${error.message}`);
         }
     }
+
+    // Get account balances
+    async getBalances() {
+        try {
+            const response = await this.makeRequest('namecheap.users.getBalances');
+
+            console.log('----------  BALANCE REQUEST -------------');
+            console.log(response);
+            console.log('--------------------------------');
+
+            // Parse balance from XML response
+            const balanceMatch = response.match(/<UserGetBalancesResult[^>]*AvailableBalance="([^"]*)"[^>]*\/>/);
+            const currencyMatch = response.match(/<UserGetBalancesResult[^>]*Currency="([^"]*)"[^>]*\/>/);
+            
+            if (balanceMatch) {
+                return {
+                    success: true,
+                    availableBalance: parseFloat(balanceMatch[1]),
+                    currency: currencyMatch ? currencyMatch[1] : 'USD'
+                };
+            } else {
+                return {
+                    success: false,
+                    message: 'Could not parse balance from response'
+                };
+            }
+        } catch (error) {
+            throw new Error(`Failed to get account balances: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new NamecheapAPI();
