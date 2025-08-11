@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VNP Solutions - Domain Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Login Page -->
+    <div id="login-page" class="auth-page">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1><img src="https://www.vnpsolutions.com/img/VNP-logo.svg" alt="VNP Logo" class="vnp-logo"> VNP Domain Dashboard</h1>
+                    <p>Manage your domains and email accounts</p>
+                </div>
+                <form id="login-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </form>
+                <div class="auth-footer">
+                    <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Page -->
+    <div id="register-page" class="auth-page hidden">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1><img src="https://www.vnpsolutions.com/img/VNP-logo.svg" alt="VNP Logo" class="vnp-logo"> Create Account</h1>
+                    <p>Join VNP Solutions Dashboard</p>
+                </div>
+                <form id="register-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="register-username">Username</label>
+                        <input type="text" id="register-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <input type="password" id="register-password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-user-plus"></i> Create Account
+                    </button>
+                </form>
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><img src="https://www.vnpsolutions.com/img/VNP-logo.svg" alt="VNP Logo" class="vnp-logo-sidebar"> Domain Central</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#" class="nav-link" data-section="domains">
+                    <i class="fas fa-globe"></i> Domains
+                </a>
+                <a href="#" class="nav-link" data-section="email-requests">
+                    <i class="fas fa-envelope"></i> Email Requests
+                </a>
+                <div class="admin-only">
+                    <a href="#" class="nav-link" data-section="admin-users">
+                        <i class="fas fa-users"></i> Manage Users
+                    </a>
+                    <a href="#" class="nav-link" data-section="admin-settings">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="username" id="current-username">Loading...</span>
+                        <span class="user-role" id="current-role">User</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="btn btn-outline btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section active">
+                <div class="section-header">
+                    <h1>Dashboard</h1>
+                    <p>Overview of your domains and email requests</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-domains">0</h3>
+                            <p>Total Domains</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-emails">0</h3>
+                            <p>Email Addresses</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="pending-requests">0</h3>
+                            <p>Pending Requests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-users">0</h3>
+                            <p>Users</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3>Recent Domains</h3>
+                            <a href="#" class="view-all" data-section="domains">View All</a>
+                        </div>
+                        <div class="card-content">
+                            <div id="recent-domains" class="list-container">
+                                <p class="loading-text">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3>Recent Email Requests</h3>
+                            <a href="#" class="view-all" data-section="email-requests">View All</a>
+                        </div>
+                        <div class="card-content">
+                            <div id="recent-email-requests" class="list-container">
+                                <p class="loading-text">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Domains Section -->
+            <section id="domains-section" class="content-section">
+                <div class="section-header">
+                    <h1>Domains</h1>
+                    <button id="purchase-domain-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Purchase Domain
+                    </button>
+                </div>
+                
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3>Your Domains</h3>
+                        <div class="card-actions">
+                            <button id="sync-domains-btn" class="btn btn-outline btn-sm admin-only">
+                                <i class="fas fa-sync"></i> Sync from Namecheap
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div id="domains-list" class="table-container">
+                            <p class="loading-text">Loading domains...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Email Requests Section -->
+            <section id="email-requests-section" class="content-section">
+                <div class="section-header">
+                    <h1>Email Requests</h1>
+                    <button id="new-email-request-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Request New Email
+                    </button>
+                </div>
+                
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3>Email Requests</h3>
+                        <div class="filter-controls">
+                            <select id="email-status-filter" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="created">Created</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div id="email-requests-list" class="table-container">
+                            <p class="loading-text">Loading email requests...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Users Section -->
+            <section id="admin-users-section" class="content-section admin-only">
+                <div class="section-header">
+                    <h1>Manage Users</h1>
+                    <button id="add-user-btn" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Add User
+                    </button>
+                </div>
+                
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3>Users</h3>
+                        <div class="search-controls">
+                            <input type="text" id="user-search" placeholder="Search users..." class="form-input">
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div id="users-list" class="table-container">
+                            <p class="loading-text">Loading users...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Settings Section -->
+            <!-- <section id="admin-settings-section" class="content-section admin-only">
+                <div class="section-header">
+                    <h1>Settings</h1>
+                    <p>System configuration and settings</p>
+                </div>
+                
+                <div class="settings-grid">
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3>System Status</h3>
+                        </div>
+                        <div class="card-content">
+                            <div id="system-status" class="status-container">
+                                <p class="loading-text">Loading system status...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3>Activity Logs</h3>
+                        </div>
+                        <div class="card-content">
+                            <div id="activity-logs" class="logs-container">
+                                <p class="loading-text">Loading activity logs...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section> -->
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal-content" class="modal-content">
+            <!-- Modal content will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
