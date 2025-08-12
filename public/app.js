@@ -112,6 +112,21 @@ function handleDynamicButtons(e) {
         case 'toggle-password':
             togglePassword();
             break;
+        case 'toggle-smtp-password':
+            toggleSmtpPassword();
+            break;
+        case 'toggle-imap-password':
+            toggleImapPassword();
+            break;
+        case 'edit-smtp-imap':
+            showEditSmtpImapModal(button.dataset.requestId);
+            break;
+        case 'update-passwords':
+            showUpdatePasswordsModal(button.dataset.requestId);
+            break;
+        case 'toggle-current-password':
+            toggleCurrentPassword();
+            break;
         case 'edit-user':
             editUser(button.dataset.userId);
             break;
@@ -1394,6 +1409,34 @@ function togglePassword() {
     }
 }
 
+function toggleSmtpPassword() {
+    const passwordDisplay = document.getElementById('smtp-password-display');
+    const actualPassword = document.getElementById('actual-smtp-password').value;
+    const toggleIcon = document.getElementById('smtp-password-toggle-icon');
+    
+    if (passwordDisplay.textContent === '••••••••') {
+        passwordDisplay.textContent = actualPassword;
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordDisplay.textContent = '••••••••';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
+function toggleImapPassword() {
+    const passwordDisplay = document.getElementById('imap-password-display');
+    const actualPassword = document.getElementById('actual-imap-password').value;
+    const toggleIcon = document.getElementById('imap-password-toggle-icon');
+    
+    if (passwordDisplay.textContent === '••••••••') {
+        passwordDisplay.textContent = actualPassword;
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordDisplay.textContent = '••••••••';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
 // Show approve email modal with SMTP/IMAP form
 async function showApproveEmailModal(requestId) {
     try {
@@ -1651,7 +1694,15 @@ async function viewSmtpImapDetails(requestId) {
                                 </div>
                                 <div class="setting-item">
                                     <label>Password:</label>
-                                    <span class="password-hidden">••••••••</span>
+                                    <div class="password-field">
+                                        <span id="smtp-password-display">${smtp.password ? '••••••••' : 'Not configured'}</span>
+                                        ${smtp.password ? `
+                                            <button type="button" class="btn btn-outline btn-sm" data-action="toggle-smtp-password">
+                                                <i class="fas fa-eye" id="smtp-password-toggle-icon"></i>
+                                            </button>
+                                            <input type="hidden" id="actual-smtp-password" value="${smtp.password}">
+                                        ` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1677,13 +1728,27 @@ async function viewSmtpImapDetails(requestId) {
                                 </div>
                                 <div class="setting-item">
                                     <label>Password:</label>
-                                    <span class="password-hidden">••••••••</span>
+                                    <div class="password-field">
+                                        <span id="imap-password-display">${imap.password ? '••••••••' : 'Not configured'}</span>
+                                        ${imap.password ? `
+                                            <button type="button" class="btn btn-outline btn-sm" data-action="toggle-imap-password">
+                                                <i class="fas fa-eye" id="imap-password-toggle-icon"></i>
+                                            </button>
+                                            <input type="hidden" id="actual-imap-password" value="${imap.password}">
+                                        ` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button class="btn btn-primary" data-action="edit-smtp-imap" data-request-id="${requestId}">
+                        <i class="fas fa-edit"></i> Edit Settings
+                    </button>
+                    <button class="btn btn-success" data-action="update-passwords" data-request-id="${requestId}">
+                        <i class="fas fa-key"></i> Update Passwords
+                    </button>
                     <button class="btn btn-outline" data-action="close-modal">Close</button>
                 </div>
             `;
@@ -1695,5 +1760,333 @@ async function viewSmtpImapDetails(requestId) {
     } catch (error) {
         console.error('Failed to load SMTP/IMAP settings:', error);
         showToast('Failed to load SMTP/IMAP settings', 'error');
+    }
+}
+
+// Show edit SMTP/IMAP settings modal
+async function showEditSmtpImapModal(requestId) {
+    try {
+        const response = await fetch(`/api/emails/${requestId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const request = data.emailRequest;
+            const smtp = request.smtpSettings || {};
+            const imap = request.imapSettings || {};
+            
+            const content = `
+                <div class="modal-header">
+                    <h2><i class="fas fa-edit"></i> Edit SMTP/IMAP Settings</h2>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+                <form id="edit-smtp-imap-form" class="modal-form">
+                    <div class="email-info">
+                        <h3>${request.fullEmailAddress}</h3>
+                        <span class="status-badge status-${request.status}">${request.status}</span>
+                    </div>
+                    
+                    <div class="email-settings">
+                        <div class="settings-section">
+                            <h4><i class="fas fa-paper-plane"></i> SMTP Settings (Outgoing Mail)</h4>
+                            <div class="form-section">
+                                <div class="form-row">
+                                    <label for="edit-smtp-server">Server:</label>
+                                    <input type="text" id="edit-smtp-server" name="smtpServer" value="${smtp.server || ''}" required>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-smtp-port">Port:</label>
+                                    <input type="number" id="edit-smtp-port" name="smtpPort" value="${smtp.port || ''}" required>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-smtp-security">Security:</label>
+                                    <select id="edit-smtp-security" name="smtpSecurity" required>
+                                        <option value="none" ${smtp.security === 'none' ? 'selected' : ''}>None</option>
+                                        <option value="ssl" ${smtp.security === 'ssl' ? 'selected' : ''}>SSL</option>
+                                        <option value="tls" ${smtp.security === 'tls' ? 'selected' : ''}>TLS</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-smtp-username">Username:</label>
+                                    <input type="text" id="edit-smtp-username" name="smtpUsername" value="${smtp.username || ''}" required>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-smtp-password">Password:</label>
+                                    <input type="password" id="edit-smtp-password" name="smtpPassword" value="${smtp.password || ''}" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4><i class="fas fa-inbox"></i> IMAP Settings (Incoming Mail)</h4>
+                            <div class="form-section">
+                                <div class="form-row">
+                                    <label for="edit-imap-server">Server:</label>
+                                    <input type="text" id="edit-imap-server" name="imapServer" value="${imap.server || ''}" required>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-imap-port">Port:</label>
+                                    <input type="number" id="edit-imap-port" name="imapPort" value="${imap.port || ''}" required>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-imap-security">Security:</label>
+                                    <select id="edit-imap-security" name="imapSecurity" required>
+                                        <option value="none" ${imap.security === 'none' ? 'selected' : ''}>None</option>
+                                        <option value="ssl" ${imap.security === 'ssl' ? 'selected' : ''}>SSL</option>
+                                        <option value="tls" ${imap.security === 'tls' ? 'selected' : ''}>TLS</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-imap-username">Username:</label>
+                                    <input type="text" id="edit-imap-username" name="imapUsername" value="${imap.username || ''}" required>
+                                </div>
+                                <div class="form-row">
+                                    <label for="edit-imap-password">Password:</label>
+                                    <input type="password" id="edit-imap-password" name="imapPassword" value="${imap.password || ''}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="requestId" value="${requestId}">
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Update Settings
+                        </button>
+                    </div>
+                </form>
+            `;
+            
+            showModal('Edit SMTP/IMAP Settings', content);
+            
+            // Add dynamic port selection for edit form
+            setupPortSelection('edit-smtp-security', 'edit-smtp-port');
+            setupPortSelection('edit-imap-security', 'edit-imap-port');
+            
+            // Add form submit handler
+            const form = document.getElementById('edit-smtp-imap-form');
+            form.addEventListener('submit', handleUpdateSmtpImap);
+        } else {
+            showToast('Failed to load email request', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to load email request:', error);
+        showToast('Failed to load email request', 'error');
+    }
+}
+
+// Handle update SMTP/IMAP settings
+async function handleUpdateSmtpImap(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const requestId = formData.get('requestId');
+    
+    // Debug: Log form data
+    console.log('Form data:', {
+        smtpServer: formData.get('smtpServer'),
+        smtpPort: formData.get('smtpPort'),
+        smtpSecurity: formData.get('smtpSecurity'),
+        smtpUsername: formData.get('smtpUsername'),
+        smtpPassword: formData.get('smtpPassword'),
+        imapServer: formData.get('imapServer'),
+        imapPort: formData.get('imapPort'),
+        imapSecurity: formData.get('imapSecurity'),
+        imapUsername: formData.get('imapUsername'),
+        imapPassword: formData.get('imapPassword')
+    });
+    
+    const updateData = {
+        status: 'created', // Keep the status as created
+        password: formData.get('smtpPassword'), // Update main email password with SMTP password
+        smtpSettings: {
+            server: formData.get('smtpServer'),
+            port: parseInt(formData.get('smtpPort')),
+            security: formData.get('smtpSecurity'),
+            username: formData.get('smtpUsername'),
+            password: formData.get('smtpPassword')
+        },
+        imapSettings: {
+            server: formData.get('imapServer'),
+            port: parseInt(formData.get('imapPort')),
+            security: formData.get('imapSecurity'),
+            username: formData.get('imapUsername'),
+            password: formData.get('imapPassword')
+        }
+    };
+    
+    try {
+        console.log('Sending update data:', updateData);
+        
+        const response = await fetch(`/api/emails/${requestId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('SMTP/IMAP settings updated successfully', 'success');
+            closeModal();
+            // Refresh the email requests list
+            loadEmailRequests();
+            // Also refresh the SMTP/IMAP view if it was open
+            setTimeout(() => {
+                viewSmtpImapDetails(requestId);
+            }, 500);
+        } else {
+            showToast(data.message || 'Failed to update settings', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to update SMTP/IMAP settings:', error);
+        showToast('Failed to update settings', 'error');
+    }
+}
+
+// Show update passwords modal
+async function showUpdatePasswordsModal(requestId) {
+    try {
+        const response = await fetch(`/api/emails/${requestId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const request = data.emailRequest;
+            
+            const content = `
+                <div class="modal-header">
+                    <h2><i class="fas fa-key"></i> Update Email Passwords</h2>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+                <form id="update-passwords-form" class="modal-form">
+                    <div class="email-info">
+                        <h3>${request.fullEmailAddress}</h3>
+                        <span class="status-badge status-${request.status}">${request.status}</span>
+                    </div>
+                    
+                    <div class="form-section">
+                        <p class="form-help">
+                            <i class="fas fa-info-circle"></i> 
+                            Update the password for this email account. This will update the main password, SMTP password, and IMAP password.
+                        </p>
+                        
+                        <div class="form-row">
+                            <label for="current-password">Current Password:</label>
+                            <div class="password-field">
+                                <input type="password" id="current-password" value="${request.password || ''}" readonly>
+                                <button type="button" class="btn btn-outline btn-sm" data-action="toggle-current-password">
+                                    <i class="fas fa-eye" id="current-password-toggle-icon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="new-password">New Password:</label>
+                            <input type="password" id="new-password" name="newPassword" required placeholder="Enter new password">
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="confirm-password">Confirm New Password:</label>
+                            <input type="password" id="confirm-password" name="confirmPassword" required placeholder="Confirm new password">
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="requestId" value="${requestId}">
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-key"></i> Update Passwords
+                        </button>
+                    </div>
+                </form>
+            `;
+            
+            showModal('Update Email Passwords', content);
+            
+            // Add form submit handler
+            const form = document.getElementById('update-passwords-form');
+            form.addEventListener('submit', handleUpdatePasswords);
+        } else {
+            showToast('Failed to load email request', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to load email request:', error);
+        showToast('Failed to load email request', 'error');
+    }
+}
+
+// Handle update passwords
+async function handleUpdatePasswords(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const requestId = formData.get('requestId');
+    const newPassword = formData.get('newPassword');
+    const confirmPassword = formData.get('confirmPassword');
+    
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showToast('Password must be at least 6 characters long', 'error');
+        return;
+    }
+    
+    const updateData = {
+        status: 'created', // Keep the status as created
+        password: newPassword, // Update main email password
+        smtpSettings: {
+            password: newPassword // Update SMTP password (keep other settings unchanged)
+        },
+        imapSettings: {
+            password: newPassword // Update IMAP password (keep other settings unchanged)
+        }
+    };
+    
+    try {
+        console.log('Updating passwords for request:', requestId);
+        
+        const response = await fetch(`/api/emails/${requestId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Passwords updated successfully', 'success');
+            closeModal();
+            // Refresh the email requests list
+            loadEmailRequests();
+        } else {
+            showToast(data.message || 'Failed to update passwords', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to update passwords:', error);
+        showToast('Failed to update passwords', 'error');
+    }
+}
+
+// Toggle current password visibility
+function toggleCurrentPassword() {
+    const passwordField = document.getElementById('current-password');
+    const toggleIcon = document.getElementById('current-password-toggle-icon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordField.type = 'password';
+        toggleIcon.className = 'fas fa-eye';
     }
 }

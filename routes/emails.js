@@ -176,7 +176,15 @@ router.put('/:id/status', requireAdmin, [
             });
         }
 
-        const { status, notes, smtpSettings, imapSettings } = req.body;
+        const { status, notes, password, smtpSettings, imapSettings } = req.body;
+        
+        console.log('Received update request:', {
+            status,
+            notes,
+            password,
+            smtpSettings,
+            imapSettings
+        });
 
         const emailRequest = await EmailRequest.findById(req.params.id);
         if (!emailRequest) {
@@ -191,17 +199,37 @@ router.put('/:id/status', requireAdmin, [
         if (notes) {
             emailRequest.notes = notes;
         }
+        
+        // Update main password if provided
+        if (password) {
+            emailRequest.password = password;
+        }
 
         // Update SMTP/IMAP settings if provided (usually when approving)
         if (smtpSettings) {
-            emailRequest.smtpSettings = smtpSettings;
+            // If we have existing settings, merge them with the new ones
+            if (emailRequest.smtpSettings) {
+                emailRequest.smtpSettings = { ...emailRequest.smtpSettings, ...smtpSettings };
+            } else {
+                emailRequest.smtpSettings = smtpSettings;
+            }
         }
         
         if (imapSettings) {
-            emailRequest.imapSettings = imapSettings;
+            // If we have existing settings, merge them with the new ones
+            if (emailRequest.imapSettings) {
+                emailRequest.imapSettings = { ...emailRequest.imapSettings, ...imapSettings };
+            } else {
+                emailRequest.imapSettings = imapSettings;
+            }
         }
 
         await emailRequest.save();
+        
+        console.log('Saved email request with settings:', {
+            smtpSettings: emailRequest.smtpSettings,
+            imapSettings: emailRequest.imapSettings
+        });
 
         // If status is 'created', add email to domain
         if (status === 'created') {
@@ -222,6 +250,11 @@ router.put('/:id/status', requireAdmin, [
             { path: 'requestedBy', select: 'username email' },
             { path: 'processedBy', select: 'username email' }
         ]);
+        
+        console.log('Final populated email request settings:', {
+            smtpSettings: emailRequest.smtpSettings,
+            imapSettings: emailRequest.imapSettings
+        });
 
         res.json({
             success: true,
