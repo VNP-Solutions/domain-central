@@ -81,7 +81,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2><img src="https://www.vnpsolutions.com/img/VNP-logo.svg" alt="VNP Logo" class="vnp-logo-sidebar"> Domain Central</h2>
+                <h2><img src="https://www.vnpsolutions.com/img/VNP-logo.svg" alt="VNP Logo" class="vnp-logo-sidebar"> Domain/SMS Central</h2>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-link active" data-section="dashboard">
@@ -92,6 +92,9 @@
                 </a>
                 <a href="#" class="nav-link" data-section="email-requests">
                     <i class="fas fa-envelope"></i> Email Requests
+                </a>
+                <a href="#" class="nav-link" data-section="sms-central">
+                    <i class="fas fa-sms"></i> SMS Central
                 </a>
                 <div class="admin-only">
                     <a href="#" class="nav-link" data-section="admin-users">
@@ -254,6 +257,77 @@
                     <div class="card-content">
                         <div id="email-requests-list" class="table-container">
                             <p class="loading-text">Loading email requests...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SMS Central Section -->
+            <section id="sms-central-section" class="content-section">
+                <div class="section-header">
+                    <h1>SMS Central</h1>
+                    <p>Manage SMS messages from forwarded virtual number</p>
+                </div>
+                
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3>SMS Integration</h3>
+                    </div>
+                    <div class="card-content">
+                        <div id="gmail-auth-status" class="auth-status">
+                            <div id="auth-needed" class="auth-section">
+                                <div class="auth-info">
+                                    <i class="fas fa-envelope-open-text"></i>
+                                    <h4>SMS Authorization Required</h4>
+                                    <p>Connect your SMS account to fetch SMS messages</p>
+                                </div>
+                                <button id="authorize-gmail-btn" class="btn btn-primary">
+                                    <i class="fab fa-google"></i> Authorize Virtual SMS Account
+                                </button>
+                            </div>
+                            <div id="auth-success" class="auth-section hidden">
+                                <div class="auth-info">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    <h4>SMS Account Connected</h4>
+                                    <p>Successfully connected to Virtual Phone Number</p>
+                                </div>
+                                <div class="auth-actions">
+                                    <button id="refresh-sms-btn" class="btn btn-primary">
+                                        <i class="fas fa-sync"></i> Refresh Messages
+                                    </button>
+                                    <button id="disconnect-gmail-btn" class="btn btn-outline">
+                                        <i class="fas fa-unlink"></i> Disconnect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sms-messages-card" class="content-card hidden">
+                    <div class="card-header">
+                        <h3>SMS Messages</h3>
+                        <div class="card-actions">
+                            <span id="sms-count" class="count-badge">0 messages</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div id="sms-messages-list" class="sms-list">
+                            <p class="loading-text">Loading SMS messages...</p>
+                        </div>
+                        <div id="sms-pagination" class="pagination-container hidden">
+                            <div class="pagination-info">
+                                <span id="sms-page-info">Showing 1-10 of 50 messages</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button id="sms-prev-btn" class="btn btn-outline btn-sm" disabled>
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span id="sms-page-numbers" class="page-numbers"></span>
+                                <button id="sms-next-btn" class="btn btn-outline btn-sm">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

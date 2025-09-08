@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const domainRoutes = require('./routes/domains');
 const emailRoutes = require('./routes/emails');
 const adminRoutes = require('./routes/admin');
+const smsRoutes = require('./routes/sms');
 const { createDefaultAdmin } = require('./utils/createAdmin');
 
 const app = express();
@@ -53,6 +54,39 @@ app.use('/api/auth', authRoutes);
 app.use('/api/domains', domainRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/sms', smsRoutes);
+
+// OAuth callback route (needs to be at root level)
+app.get('/oauth2callback', async (req, res) => {
+    const gmailAPI = require('./services/gmailAPI');
+    const tokenStore = require('./utils/tokenStore');
+    
+    try {
+        const { code } = req.query;
+        
+        if (!code) {
+            return res.redirect('/?auth=error&message=no_code');
+        }
+
+        // Exchange code for tokens
+        const tokens = await gmailAPI.getTokens(code);
+        
+        // Store tokens in token store
+        tokenStore.setDefaultTokens(tokens);
+        
+        // Set tokens in Gmail API for immediate use
+        gmailAPI.setTokens(tokens);
+        
+        console.log('Gmail OAuth successful, tokens stored');
+        
+        // Redirect back to the SMS Central page with success message
+        res.redirect('/?section=sms-central&auth=success');
+        
+    } catch (error) {
+        console.error('OAuth callback error:', error);
+        res.redirect('/?section=sms-central&auth=error');
+    }
+});
 
 // Serve frontend
 app.get('*', (req, res) => {

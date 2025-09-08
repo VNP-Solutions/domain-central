@@ -15,6 +15,32 @@ const modalContent = document.getElementById('modal-content');
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     checkAuthStatus();
+    
+    // Check for OAuth callback success
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section');
+    const auth = urlParams.get('auth');
+    
+    if (section === 'sms-central' && auth) {
+        setTimeout(async () => {
+            if (auth === 'success') {
+                showToast('Gmail authorization successful!', 'success');
+                await navigateToSection('sms-central');
+                
+                // Automatically sync messages after successful authorization
+                setTimeout(async () => {
+                    showToast('Fetching SMS messages...', 'info');
+                    await refreshSmsMessages();
+                }, 1000);
+            } else if (auth === 'error') {
+                showToast('Gmail authorization failed. Please try again.', 'error');
+                await navigateToSection('sms-central');
+            }
+            
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 1000);
+    }
 });
 
 // Setup event listeners
@@ -66,6 +92,15 @@ function setupEventListeners() {
     
     // Admin actions
     document.getElementById('add-user-btn')?.addEventListener('click', showAddUserModal);
+    
+    // Gmail authorization buttons
+    document.getElementById('authorize-gmail-btn')?.addEventListener('click', authorizeGmail);
+    document.getElementById('refresh-sms-btn')?.addEventListener('click', refreshSmsMessages);
+    document.getElementById('disconnect-gmail-btn')?.addEventListener('click', disconnectGmail);
+    
+    // SMS pagination buttons
+    document.getElementById('sms-prev-btn')?.addEventListener('click', () => changeSmsPage(-1));
+    document.getElementById('sms-next-btn')?.addEventListener('click', () => changeSmsPage(1));
     
     // Search and filters
     document.getElementById('email-status-filter')?.addEventListener('change', filterEmailRequests);
@@ -126,6 +161,18 @@ function handleDynamicButtons(e) {
             break;
         case 'toggle-current-password':
             toggleCurrentPassword();
+            break;
+        case 'authorize-gmail':
+            authorizeGmail();
+            break;
+        case 'disconnect-gmail':
+            disconnectGmail();
+            break;
+        case 'refresh-sms':
+            refreshSmsMessages();
+            break;
+        case 'view-sms':
+            viewSmsMessage(button.dataset.messageId);
             break;
         case 'edit-user':
             editUser(button.dataset.userId);
@@ -394,6 +441,9 @@ async function loadSectionData(section) {
             break;
         case 'email-requests':
             await loadEmailRequests();
+            break;
+        case 'sms-central':
+            await loadSmsSection();
             break;
         case 'admin-users':
             if (currentUser && currentUser.isAdmin) {
@@ -2088,5 +2138,398 @@ function toggleCurrentPassword() {
     } else {
         passwordField.type = 'password';
         toggleIcon.className = 'fas fa-eye';
+    }
+}
+
+// ===== SMS CENTRAL FUNCTIONS =====
+
+// SMS pagination state
+let currentSmsPage = 1;
+const smsPerPage = 10;
+
+// Load SMS Central section
+async function loadSmsSection() {
+    try {
+        // Check Gmail authentication status
+        const isAuthenticated = await checkGmailAuthStatus();
+        
+        // If authenticated, load messages
+        if (isAuthenticated) {
+            await loadSmsMessages();
+        }
+    } catch (error) {
+        console.error('Error loading SMS section:', error);
+        showToast('Failed to load SMS section', 'error');
+    }
+}
+
+// Check Gmail authentication status
+async function checkGmailAuthStatus() {
+    try {
+        const response = await fetch('/api/sms/auth/status');
+        const data = await response.json();
+        
+        const authNeeded = document.getElementById('auth-needed');
+        const authSuccess = document.getElementById('auth-success');
+        const messagesCard = document.getElementById('sms-messages-card');
+        
+        if (data.success && data.authenticated) {
+            // Show authenticated state
+            authNeeded.classList.add('hidden');
+            authSuccess.classList.remove('hidden');
+            messagesCard.classList.remove('hidden');
+        } else {
+            // Show authentication needed state
+            authNeeded.classList.remove('hidden');
+            authSuccess.classList.add('hidden');
+            messagesCard.classList.add('hidden');
+        }
+        
+        return data.authenticated;
+    } catch (error) {
+        console.error('Error checking Gmail auth status:', error);
+        return false;
+    }
+}
+
+// Authorize Gmail
+async function authorizeGmail() {
+    try {
+        const response = await fetch('/api/sms/auth/url');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Open authorization URL in new window
+            const authWindow = window.open(data.authUrl, 'gmail-auth', 'width=500,height=600');
+            
+            // Poll for authorization completion
+            const pollTimer = setInterval(() => {
+                try {
+                    if (authWindow.closed) {
+                        clearInterval(pollTimer);
+                        // Check if authorization was successful
+                        setTimeout(() => {
+                            checkGmailAuthStatus();
+                        }, 1000);
+                    }
+                } catch (e) {
+                    // Cross-origin error means auth window is still open
+                }
+            }, 1000);
+        } else {
+            showToast('Failed to get authorization URL', 'error');
+        }
+    } catch (error) {
+        console.error('Error authorizing Gmail:', error);
+        showToast('Failed to authorize Gmail', 'error');
+    }
+}
+
+// Disconnect Gmail
+async function disconnectGmail() {
+    try {
+        const response = await fetch('/api/sms/auth/disconnect', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Gmail disconnected successfully', 'success');
+            await checkGmailAuthStatus();
+        } else {
+            showToast('Failed to disconnect Gmail', 'error');
+        }
+    } catch (error) {
+        console.error('Error disconnecting Gmail:', error);
+        showToast('Failed to disconnect Gmail', 'error');
+    }
+}
+
+// Refresh SMS messages
+async function refreshSmsMessages() {
+    try {
+        showLoading();
+        
+        const response = await fetch('/api/sms/sync', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            await loadSmsMessages();
+        } else {
+            if (data.requiresReauth) {
+                showToast('Gmail authorization expired. Please re-authorize.', 'error');
+                await checkGmailAuthStatus();
+            } else {
+                showToast(data.message || 'Failed to refresh messages', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error refreshing SMS messages:', error);
+        showToast('Failed to refresh SMS messages', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Load SMS messages
+async function loadSmsMessages(page = 1) {
+    try {
+        currentSmsPage = page;
+        const offset = (page - 1) * smsPerPage;
+        
+        const response = await fetch(`/api/sms/messages?limit=${smsPerPage}&offset=${offset}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderSmsMessages(data.messages);
+            updateSmsCount(data.total);
+            updateSmsPagination(data.total, page);
+        } else {
+            showToast('Failed to load SMS messages', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading SMS messages:', error);
+        showToast('Failed to load SMS messages', 'error');
+    }
+}
+
+// Render SMS messages list
+function renderSmsMessages(messages) {
+    const container = document.getElementById('sms-messages-list');
+    
+    console.log('renderSmsMessages called with', messages.length, 'messages');
+    
+    if (!messages || messages.length === 0) {
+        container.innerHTML = `
+            <div class="sms-empty">
+                <i class="fas fa-sms"></i>
+                <h3>No SMS Messages</h3>
+                <p>No SMS messages found. Click "Refresh Messages" to fetch new messages from Gmail.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Clear the container first to prevent nesting issues
+    container.innerHTML = '';
+    
+    // Create messages one by one to avoid HTML parsing issues
+    messages.forEach((message, index) => {
+        const date = new Date(message.gmailDate);
+        const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        // Escape HTML in the preview to prevent parsing issues
+        const preview = escapeHtml(message.smsContent.substring(0, 100)) + (message.smsContent.length > 100 ? '...' : '');
+        const sender = escapeHtml(message.sender);
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `sms-item ${message.isRead ? '' : 'unread'}`;
+        messageDiv.setAttribute('data-action', 'view-sms');
+        messageDiv.setAttribute('data-message-id', message.messageId);
+        
+        messageDiv.innerHTML = `
+            <div class="sms-sender">${sender}</div>
+            <div class="sms-content">
+                <div class="sms-preview">${preview}</div>
+                <div class="sms-meta">
+                    <div class="sms-date">
+                        <i class="fas fa-clock"></i>
+                        ${formattedDate}
+                    </div>
+                    <div class="sms-status ${message.isRead ? '' : 'unread'}">
+                        <i class="fas fa-circle"></i>
+                        ${message.isRead ? 'Read' : 'Unread'}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(messageDiv);
+        console.log(`Added message ${index + 1}:`, message.messageId);
+    });
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Update SMS count badge
+function updateSmsCount(count) {
+    const countBadge = document.getElementById('sms-count');
+    if (countBadge) {
+        countBadge.textContent = `${count} message${count !== 1 ? 's' : ''}`;
+    }
+}
+
+// View SMS message details
+async function viewSmsMessage(messageId) {
+    try {
+        const response = await fetch(`/api/sms/messages/${messageId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const message = data.message;
+            const date = new Date(message.gmailDate);
+            const gmailDate = new Date(message.gmailDate);
+            
+            const content = `
+                <div class="sms-detail-header">
+                    <div class="sms-sender-info">
+                        <i class="fas fa-mobile-alt"></i>
+                        <div class="sms-sender-details">
+                            <h3>${message.sender}</h3>
+                            <p>SMS Message</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+                
+                <div class="sms-message-content">
+                    ${message.smsContent}
+                </div>
+                
+                <div class="sms-metadata">
+                    <div class="sms-meta-item">
+                        <div class="sms-meta-label">Gmail Date</div>
+                        <div class="sms-meta-value">${date.toLocaleString()}</div>
+                    </div>
+                    <div class="sms-meta-item">
+                        <div class="sms-meta-label">Subject</div>
+                        <div class="sms-meta-value">${message.subject}</div>
+                    </div>
+                    <div class="sms-meta-item">
+                        <div class="sms-meta-label">Status</div>
+                        <div class="sms-meta-value">${message.isRead ? 'Read' : 'Unread'}</div>
+                    </div>
+                    <div class="sms-meta-item">
+                        <div class="sms-meta-label">Message ID</div>
+                        <div class="sms-meta-value">${message.messageId}</div>
+                    </div>
+                </div>
+            `;
+            
+            showModal('SMS Message Details', content);
+            
+            // Mark as read if it wasn't already
+            if (!message.isRead) {
+                await markSmsAsRead(messageId);
+            }
+        } else {
+            showToast('Failed to load SMS message', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading SMS message:', error);
+        showToast('Failed to load SMS message', 'error');
+    }
+}
+
+// Mark SMS as read
+async function markSmsAsRead(messageId) {
+    try {
+        const response = await fetch(`/api/sms/messages/${messageId}/read`, {
+            method: 'PUT'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Refresh the messages list to update read status
+            await loadSmsMessages(currentSmsPage);
+        }
+    } catch (error) {
+        console.error('Error marking SMS as read:', error);
+    }
+}
+
+// Update SMS pagination
+function updateSmsPagination(totalMessages, currentPage) {
+    const paginationContainer = document.getElementById('sms-pagination');
+    const pageInfo = document.getElementById('sms-page-info');
+    const pageNumbers = document.getElementById('sms-page-numbers');
+    const prevBtn = document.getElementById('sms-prev-btn');
+    const nextBtn = document.getElementById('sms-next-btn');
+    
+    console.log('updateSmsPagination called:', { totalMessages, currentPage, paginationContainer: !!paginationContainer });
+    
+    // Always show pagination for now to test (remove this later)
+    // if (totalMessages <= smsPerPage) {
+    //     // Hide pagination if all messages fit on one page
+    //     paginationContainer.classList.add('hidden');
+    //     return;
+    // }
+    
+    console.log('Showing pagination for', totalMessages, 'messages');
+    
+    paginationContainer.classList.remove('hidden');
+    
+    const totalPages = Math.ceil(totalMessages / smsPerPage);
+    const startItem = (currentPage - 1) * smsPerPage + 1;
+    const endItem = Math.min(currentPage * smsPerPage, totalMessages);
+    
+    // Update page info
+    pageInfo.textContent = `Showing ${startItem}-${endItem} of ${totalMessages} messages`;
+    
+    // Update prev/next buttons
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+    
+    // Generate page numbers
+    let pageNumbersHtml = '';
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // Adjust start page if we're near the end
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // Add first page and ellipsis if needed
+    if (startPage > 1) {
+        pageNumbersHtml += `<span class="page-number" data-page="1">1</span>`;
+        if (startPage > 2) {
+            pageNumbersHtml += `<span class="page-ellipsis">...</span>`;
+        }
+    }
+    
+    // Add visible page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentPage ? ' active' : '';
+        pageNumbersHtml += `<span class="page-number${activeClass}" data-page="${i}">${i}</span>`;
+    }
+    
+    // Add last page and ellipsis if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            pageNumbersHtml += `<span class="page-ellipsis">...</span>`;
+        }
+        pageNumbersHtml += `<span class="page-number" data-page="${totalPages}">${totalPages}</span>`;
+    }
+    
+    pageNumbers.innerHTML = pageNumbersHtml;
+    
+    // Add click handlers to page numbers
+    pageNumbers.querySelectorAll('.page-number').forEach(pageNum => {
+        pageNum.addEventListener('click', () => {
+            const page = parseInt(pageNum.dataset.page);
+            if (page !== currentPage) {
+                loadSmsMessages(page);
+            }
+        });
+    });
+}
+
+// Change SMS page
+async function changeSmsPage(direction) {
+    const newPage = currentSmsPage + direction;
+    if (newPage >= 1) {
+        await loadSmsMessages(newPage);
     }
 }

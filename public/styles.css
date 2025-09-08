@@ -986,6 +986,322 @@ body.is-admin .nav-link.admin-only {
     color: white !important;
 }
 
+/* SMS Central Styles */
+/* Force SMS list to display properly */
+#sms-messages-list {
+    display: block !important;
+    width: 100% !important;
+}
+
+#sms-messages-list .sms-item {
+    display: flex !important;
+    width: 100% !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+}
+.auth-status {
+    padding: 0;
+}
+
+.auth-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px;
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+}
+
+.auth-section.hidden {
+    display: none;
+}
+
+.auth-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.auth-info i {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.auth-info i.text-success {
+    color: var(--success-color);
+}
+
+.auth-info h4 {
+    margin: 0 0 4px 0;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+}
+
+.auth-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.auth-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.sms-list {
+    max-height: 600px;
+    overflow-y: auto;
+    width: 100%;
+    display: block; /* Ensure block layout, not flex */
+}
+
+.sms-item {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100% !important;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    position: relative;
+    clear: both;
+    float: none !important;
+    margin: 0 !important;
+}
+
+.sms-item:hover {
+    background-color: var(--hover-color);
+}
+
+.sms-item:last-child {
+    border-bottom: none;
+}
+
+.sms-item.unread {
+    background-color: rgba(59, 130, 246, 0.05);
+    border-left: 4px solid var(--primary-color);
+}
+
+.sms-sender {
+    min-width: 140px;
+    max-width: 140px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    flex-shrink: 0;
+    word-break: break-word;
+}
+
+.sms-content {
+    flex: 1;
+    min-width: 0; /* Allow content to shrink */
+    overflow: hidden;
+}
+
+.sms-preview {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sms-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.sms-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sms-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sms-status.unread {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.sms-empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-secondary);
+}
+
+.sms-empty i {
+    font-size: 3rem;
+    color: var(--border-color);
+    margin-bottom: 16px;
+    display: block;
+}
+
+.count-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* SMS Pagination Styles */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+}
+
+.pagination-info {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-number {
+    padding: 6px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.page-number:hover {
+    background-color: var(--hover-color);
+    color: var(--text-primary);
+}
+
+.page-number.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.page-number.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-ellipsis {
+    padding: 6px 4px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .pagination-container {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .pagination-controls {
+        order: -1;
+    }
+}
+
+/* SMS Detail Modal */
+.sms-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.sms-sender-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sms-sender-info i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.sms-sender-details h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+.sms-sender-details p {
+    margin: 4px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.sms-message-content {
+    background: var(--background-secondary);
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.sms-metadata {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.sms-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sms-meta-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sms-meta-value {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
 /* Email Credentials and SMTP/IMAP Modal Styles */
 .credentials-info, .email-settings {
     padding: 20px 0;
